@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Import & Bóc Tách Lịch Lên Chuyền</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #05080f;
+  --surface: #0d1424;
+  --surface2: #152035;
+  --surface3: #1a2840;
+  --border: #1e3050;
+  --border2: #253a5e;
+  --accent: #00d4aa;
+  --accent2: #3d8ef8;
+  --accent3: #f59e0b;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --success: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --r-fac2: #00c9a7; --r-fac3: #3b82f6; --r-fac4: #f59e0b; --r-fac5: #a855f7;
+  --r-fac2-bg: rgba(0,201,167,.08); --r-fac3-bg: rgba(59,130,246,.08);
+  --r-fac4-bg: rgba(245,158,11,.08); --r-fac5-bg: rgba(168,85,247,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle at 20% 20%,rgba(0,212,170,.04) 0%,transparent 50%),radial-gradient(circle at 80% 80%,rgba(61,142,248,.04) 0%,transparent 50%);pointer-events:none;z-index:0;}
+
+/* === HEADER === */
+.app-header{background:linear-gradient(90deg,#060c1a 0%,#0d1424 100%);border-bottom:1px solid var(--border);padding:0 32px;position:sticky;top:0;z-index:200;backdrop-filter:blur(16px);}
+.header-inner{max-width:1800px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:60px;}
+.logo{display:flex;align-items:center;gap:14px;}
+.logo-mark{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.logo-name{font-size:15px;font-weight:800;letter-spacing:-.4px;}
+.logo-sub{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;}
+.header-actions{display:flex;gap:10px;align-items:center;}
+
+/* === BUTTONS === */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:8px;font-family:'Be Vietnam Pro',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .18s;}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px);}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2);}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-export{background:rgba(0,212,170,.12);border:1px solid var(--accent);color:var(--accent);}
+.btn-export:hover{background:rgba(0,212,170,.22);}
+.btn-sm{padding:6px 12px;font-size:12px;}
+
+/* === LAYOUT === */
+.app-body{position:relative;z-index:1;max-width:1800px;margin:0 auto;padding:24px 32px;}
+
+/* === UPLOAD ZONE === */
+.upload-section{margin-bottom:28px;}
+.upload-zone{border:2px dashed var(--border2);border-radius:14px;background:var(--surface);padding:48px;text-align:center;transition:all .25s;cursor:pointer;position:relative;}
+.upload-zone.dragover{border-color:var(--accent);background:rgba(0,212,170,.05);}
+.upload-zone:hover{border-color:var(--accent2);background:rgba(61,142,248,.04);}
+.upload-icon{font-size:52px;margin-bottom:14px;display:block;}
+.upload-title{font-size:18px;font-weight:700;margin-bottom:8px;}
+.upload-sub{font-size:13px;color:var(--text3);}
+.upload-sub strong{color:var(--accent);font-weight:600;}
+.file-input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+
+/* === PROGRESS === */
+.progress-wrap{display:none;margin-top:16px;}
+.progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .4s ease;border-radius:3px;}
+.progress-text{font-size:12px;color:var(--text3);margin-top:8px;text-align:center;}
+.log-wrap{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:11px;max-height:120px;overflow-y:auto;}
+.log-line{color:var(--text3);line-height:1.7;}
+.log-line.ok{color:var(--success);}
+.log-line.warn{color:var(--warn);}
+.log-line.err{color:var(--danger);}
+
+/* === STATS STRIP === */
+.stats-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+.stat-val{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;line-height:1;margin-bottom:4px;}
+.stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+
+/* === FILTER BAR === */
+.filter-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.fl{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);white-space:nowrap;}
+select,input[type=text]{background:var(--surface2);border:1px solid var(--border2);border-radius:7px;color:var(--text);padding:7px 11px;font-size:12px;font-family:'Be Vietnam Pro',sans-serif;outline:none;transition:border-color .2s;}
+select:focus,input[type=text]:focus{border-color:var(--accent);}
+.search-wrap{position:relative;flex:1;min-width:220px;}
+.search-wrap input{width:100%;padding-left:30px;}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none;}
+.filter-badge{display:inline-block;background:var(--accent);color:#000;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px;}
+
+/* === TABLE === */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.table-header-row{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);}
+.table-title{font-size:13px;font-weight:700;color:var(--text2);display:flex;align-items:center;gap:8px;}
+.table-actions{display:flex;gap:8px;}
+
+.data-table{width:100%;border-collapse:collapse;font-size:12px;}
+.data-table thead{position:sticky;top:0;z-index:10;}
+.data-table th{background:#07111f;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
+.data-table th:hover{color:var(--accent);}
+.data-table th.sorted-asc::after{content:' ↑';color:var(--accent);}
+.data-table th.sorted-desc::after{content:' ↓';color:var(--accent);}
+.data-table td{padding:9px 12px;border-bottom:1px solid rgba(30,48,80,.5);vertical-align:middle;}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:rgba(0,212,170,.03);}
+
+/* Row coloring by factory */
+.row-二厂{background:rgba(0,201,167,.04);}
+.row-三厂{background:rgba(59,130,246,.04);}
+.row-四厂{background:rgba(245,158,11,.04);}
+.row-五厂板房{background:rgba(168,85,247,.04);}
+
+.fac-chip{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;}
+.chip-二厂{background:rgba(0,201,167,.15);color:#00c9a7;}
+.chip-三厂{background:rgba(59,130,246,.15);color:#60a5fa;}
+.chip-四厂{background:rgba(245,158,11,.15);color:#fbbf24;}
+.chip-五厂板房{background:rgba(168,85,247,.15);color:#c084fc;}
+
+.order-id-cell{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:600;}
+.qty-cell{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--text);}
+.xf-cell{font-size:11px;color:var(--warn);font-family:'JetBrains Mono',monospace;}
+.day-badge{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+.new-badge{display:inline-block;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;}
+.badge-new{background:rgba(59,130,246,.15);color:#60a5fa;}
+.badge-old{background:rgba(100,116,139,.15);color:var(--text3);}
+.badge-blank{background:rgba(100,116,139,.08);color:var(--text3);}
+
+/* Pagination */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--border);}
+.page-info{font-size:12px;color:var(--text3);}
+.page-btns{display:flex;gap:6px;}
+.page-btn{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text2);padding:5px 10px;font-size:12px;cursor:pointer;transition:all .15s;font-family:'Be Vietnam Pro',sans-serif;}
+.page-btn:hover{border-color:var(--accent);color:var(--accent);}
+.page-btn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700;}
+.page-btn:disabled{opacity:.4;pointer-events:none;}
+
+/* Empty state */
+.empty{text-align:center;padding:72px 20px;color:var(--text3);}
+.empty-icon{font-size:56px;margin-bottom:14px;}
+.empty-title{font-size:17px;font-weight:700;margin-bottom:6px;color:var(--text2);}
+.empty-desc{font-size:13px;}
+
+/* Section labels */
+.section-divider{display:flex;align-items:center;gap:10px;color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.8px;margin:6px 0;}
+.section-divider::before,.section-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* Toast */
+.toast{position:fixed;bottom:28px;right:28px;z-index:1000;background:var(--surface3);border:1px solid var(--accent);border-radius:10px;padding:12px 18px;font-size:13px;color:var(--text);font-weight:600;transform:translateY(100px);opacity:0;transition:all .3s;pointer-events:none;display:flex;align-items:center;gap:8px;}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* === VIEW TOGGLE === */
+.view-toggle{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;flex-shrink:0;}
+.vtbtn{padding:6px 14px;background:none;border:none;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;transition:all .18s;display:flex;align-items:center;gap:5px;}
+.vtbtn.active{background:var(--accent);color:#000;}
+.vtbtn:not(.active):hover{color:var(--accent);}
+
+/* === CALENDAR === */
+.cal-month-block{margin-bottom:32px;}
+.cal-month-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;}
+.cal-month-name{font-size:16px;font-weight:800;color:var(--text);}
+.cal-month-meta{font-size:12px;color:var(--text3);}
+.cal-month-pills{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;}
+.cal-month-pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;}
+
+.cal-grid-wrap{overflow-x:auto;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:6px;min-width:840px;}
+.cal-dow{text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);padding:6px 0;}
+.cal-cell{background:var(--surface);border:1px solid var(--border);border-radius:9px;min-height:90px;padding:7px;transition:border-color .18s;position:relative;}
+.cal-cell.empty{background:transparent;border-color:transparent;}
+.cal-cell.has-orders{border-color:var(--border2);}
+.cal-cell:not(.empty):hover{border-color:var(--accent);background:rgba(0,212,170,.03);}
+.cal-day-num{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:5px;font-family:'JetBrains Mono',monospace;}
+.cal-cell.has-orders .cal-day-num{color:var(--text);}
+.cal-pill{padding:3px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-bottom:3px;line-height:1.35;cursor:pointer;transition:opacity .15s;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-pill:hover{opacity:.75;}
+.cal-more{font-size:9px;color:var(--text3);padding:2px 4px;cursor:pointer;}
+.cal-more:hover{color:var(--accent);}
+.pill-二厂{background:rgba(0,201,167,.18);color:#00c9a7;}
+.pill-三厂{background:rgba(59,130,246,.18);color:#60a5fa;}
+.pill-四厂{background:rgba(245,158,11,.18);color:#fbbf24;}
+.pill-五厂板房{background:rgba(168,85,247,.18);color:#c084fc;}
+.cal-total-bar{font-size:9px;color:var(--text3);margin-top:4px;font-family:'JetBrains Mono',monospace;}
+
+/* === MODAL === */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);z-index:500;display:none;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:28px;width:500px;max-width:95vw;max-height:88vh;overflow-y:auto;animation:modalIn .22s ease;}
+@keyframes modalIn{from{transform:scale(.94) translateY(12px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.modal-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;}
+.modal-oid{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);margin-bottom:4px;}
+.modal-shoe{font-size:19px;font-weight:800;}
+.modal-close{width:30px;height:30px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;cursor:pointer;color:var(--text3);font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.modal-close:hover{border-color:var(--danger);color:var(--danger);}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mf{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;}
+.mf.full{grid-column:1/-1;}
+.mf-label{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin-bottom:3px;}
+.mf-val{font-size:13px;font-weight:600;color:var(--text);}
+.mf-val.mono{font-family:'JetBrains Mono',monospace;font-size:12px;}
+.mf-val.accent{color:var(--accent);}
+.mf-val.warn{color:var(--warn);}
+
+/* Responsive */
+@media(max-width:900px){
+  .stats-strip{grid-template-columns:repeat(2,1fr);}
+  .app-body{padding:16px;}
+}
+.year-edit-panel{
+  background:var(--surface);border:1px solid var(--accent3);border-radius:12px;
+  padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;
+  justify-content:space-between;gap:16px;flex-wrap:wrap;
+  box-shadow:0 0 0 1px rgba(245,158,11,.15), 0 4px 20px rgba(245,158,11,.08);
+}
+.yep-left{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.yep-title{font-size:13px;font-weight:700;color:var(--accent3);}
+.yep-desc{font-size:11px;color:var(--text3);margin-top:2px;}
+.yep-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.yep-group{display:flex;flex-direction:column;gap:3px;}
+.yep-label{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);}
+.yep-select,.yep-input{
+  background:var(--surface2);border:1px solid var(--border2);border-radius:7px;
+  color:var(--text);padding:6px 10px;font-size:13px;font-family:'Be Vietnam Pro',sans-serif;
+  outline:none;transition:border-color .2s;min-width:130px;
+}
+.yep-select:focus,.yep-input:focus{border-color:var(--accent3);}
+.yep-input{width:110px;}
+.yep-arrow{font-size:18px;color:var(--accent3);font-weight:700;padding-top:16px;}
+.btn-apply-year{
+  background:var(--accent3);color:#000;border:none;border-radius:8px;
+  padding:8px 18px;font-family:'Be Vietnam Pro',sans-serif;font-size:13px;font-weight:700;
+  cursor:pointer;transition:all .18s;margin-top:16px;white-space:nowrap;
+}
+.btn-apply-year:hover{opacity:.85;transform:translateY(-1px);}
+.yep-result{font-size:12px;font-weight:600;padding-top:16px;min-width:120px;}
+.yep-result.ok{color:var(--success);}
+.yep-result.err{color:var(--danger);}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-mark">🏭</div>
+      <div>
+        <div class="logo-name">Import & Bóc Tách Lịch Lên Chuyền</div>
+        <div class="logo-sub">Đế giày da nữ xuất khẩu · Đọc & chuẩn hóa file Excel tự động</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-export" id="btn-export-xlsx" onclick="exportExcel()" disabled>⬇ Xuất Excel</button>
+      <button class="btn btn-export btn-sm" id="btn-export-csv" onclick="exportCSV()" disabled>⬇ Xuất CSV</button>
+    </div>
+  </div>
+</header>
+
+<div class="app-body">
+
+  <!-- Upload zone -->
+  <div class="upload-section">
+    <div class="upload-zone" id="dropzone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <input type="file" class="file-input" id="fileInput" accept=".xlsx,.xls" onchange="onFileSelect(event)">
+      <span class="upload-icon">📂</span>
+      <div class="upload-title">Kéo thả hoặc click để chọn file Excel</div>
+      <div class="upload-sub">Hỗ trợ file <strong>排期表</strong> — Bóc tách tự động mã lệnh, sản lượng, ngày lên chuyền, ngày XF từ tất cả sheet nhà máy</div>
+    </div>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">Đang xử lý...</div>
+      <div class="log-wrap" id="logWrap"></div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-strip" id="statsStrip" style="display:none">
+    <div class="stat-card">
+      <div class="stat-val" id="s-total" style="color:var(--accent)">0</div>
+      <div class="stat-label">Tổng đơn hàng</div>
+      <div class="stat-sub" id="s-sheets">0 sheet đã đọc</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="s-qty" style="color:var(--accent2)">0</div>
+      <div class="stat-label">Tổng sản lượng (PRS)</div>
+      <div class="stat-sub" id="s-months">0 tháng</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="s-factories" style="color:var(--r-fac3)">0</div>
+      <div class="stat-label">Nhà máy</div>
+      <div class="stat-sub" id="s-lines">0 dây chuyền</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="s-new" style="color:#60a5fa">0</div>
+      <div class="stat-label">Đơn mới (新款)</div>
+      <div class="stat-sub" id="s-old">0 đơn cũ (旧款)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="s-updated" style="color:var(--accent3)">—</div>
+      <div class="stat-label">Cập nhật gần nhất</div>
+      <div class="stat-sub" id="s-filename">—</div>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar" id="filterBar" style="display:none">
+    <span class="fl">Lọc</span>
+    <select id="f-factory" onchange="renderTable()">
+      <option value="">Tất cả nhà máy</option>
+    </select>
+    <select id="f-line" onchange="renderTable()">
+      <option value="">Tất cả dây chuyền</option>
+      <option value="A">Dây A</option>
+      <option value="B">Dây B</option>
+    </select>
+    <select id="f-year" onchange="renderTable()">
+      <option value="">Tất cả năm</option>
+    </select>
+    <select id="f-month" onchange="renderTable()">
+      <option value="">Tất cả tháng</option>
+    </select>
+    <select id="f-newold" onchange="renderTable()">
+      <option value="">Mới & Cũ</option>
+      <option value="新款">Mới (新款)</option>
+      <option value="旧款">Cũ (旧款)</option>
+    </select>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="f-search" placeholder="Tìm mã lệnh, tên giày, style code..." oninput="renderTable()">
+    </div>
+    <span id="filter-count" style="font-size:12px;color:var(--text3);white-space:nowrap;"></span>
+    <div class="view-toggle" id="viewToggle">
+      <button class="vtbtn active" id="btn-view-table" onclick="switchView('table')">☰ Bảng</button>
+      <button class="vtbtn" id="btn-view-cal" onclick="switchView('calendar')">📅 Lịch</button>
+    </div>
+  </div>
+
+  <!-- Bulk year edit panel -->
+  <div class="year-edit-panel" id="yearEditPanel" style="display:none">
+    <div class="yep-left">
+      <span style="font-size:18px;">✏️</span>
+      <div>
+        <div class="yep-title">Sửa hàng loạt — Năm lên chuyền</div>
+        <div class="yep-desc" id="yep-scope">Áp dụng cho tất cả đơn hàng</div>
+      </div>
+    </div>
+    <div class="yep-right">
+      <div class="yep-group">
+        <span class="yep-label">Từ năm</span>
+        <select id="yep-from" class="yep-select">
+          <option value="">— Chọn năm gốc —</option>
+        </select>
+      </div>
+      <div class="yep-arrow">→</div>
+      <div class="yep-group">
+        <span class="yep-label">Đổi thành</span>
+        <input type="number" id="yep-to" class="yep-input" placeholder="VD: 2025" min="2020" max="2035">
+      </div>
+      <div class="yep-group">
+        <span class="yep-label">Phạm vi</span>
+        <select id="yep-scope-sel" class="yep-select">
+          <option value="all">Tất cả đơn</option>
+          <option value="filtered">Chỉ kết quả lọc hiện tại</option>
+        </select>
+      </div>
+      <button class="btn-apply-year" onclick="applyYearEdit()">Áp dụng</button>
+      <div class="yep-result" id="yep-result"></div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap" id="tableWrap" style="display:none">
+    <div class="table-header-row">
+      <div class="table-title">
+        📋 Dữ liệu đã bóc tách
+        <span id="row-count" class="filter-badge">0</span>
+      </div>
+      <div class="table-actions">
+        <select id="page-size" onchange="changePgSize()" style="padding:5px 8px;font-size:11px;">
+          <option value="50">50 dòng</option>
+          <option value="100" selected>100 dòng</option>
+          <option value="200">200 dòng</option>
+          <option value="9999">Tất cả</option>
+        </select>
+      </div>
+    </div>
+    <div style="overflow-x:auto;max-height:600px;overflow-y:auto;">
+      <table class="data-table" id="dataTable">
+        <thead>
+          <tr>
+            <th onclick="sortBy('stt')">#</th>
+            <th onclick="sortBy('factory')">Nhà máy</th>
+            <th onclick="sortBy('line')">Dây</th>
+            <th onclick="sortBy('order_id')">Mã lệnh</th>
+            <th onclick="sortBy('production_id')">Production ID</th>
+            <th onclick="sortBy('line_up_date')">Ngày LC (đầy đủ)</th>
+            <th onclick="sortBy('line_up_day')">Ngày</th>
+            <th onclick="sortBy('month')">Tháng</th>
+            <th onclick="sortBy('year')">Năm</th>
+            <th onclick="sortBy('style_code')">Style</th>
+            <th onclick="sortBy('shoe_name')">Tên giày</th>
+            <th onclick="sortBy('quantity')">SL (PRS)</th>
+            <th onclick="sortBy('delivery_date')">Ngày XF</th>
+            <th onclick="sortBy('new_old')">Loại</th>
+            <th>Khuôn (Last)</th>
+            <th>Ghi chú</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+  <!-- Empty / placeholder -->
+  <div class="empty" id="emptyPlaceholder">
+    <div class="empty-icon">📊</div>
+    <div class="empty-title">Chưa có dữ liệu</div>
+    <div class="empty-desc">Import file Excel lịch lên chuyền (排期表) để bắt đầu bóc tách dữ liệu</div>
+  </div>
+
+  <!-- Calendar view -->
+  <div id="calendarView" style="display:none">
+    <div id="calendarContainer"></div>
+  </div>
+
+  <!-- Order detail modal -->
+  <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+    <div class="modal-box" id="modalBox"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let allOrders = [];
+let filtered  = [];
+let sortCol   = 'year';
+let sortDir   = 'asc';
+let page      = 1;
+let pageSize  = 100;
+let currentView = 'table';
+
+const FACTORY_MAP = {
+  '底部排期2厂':     '二厂',
+  '底部排期3厂 ':    '三厂',
+  '底部排期3厂':     '三厂',
+  '底部排期4厂 ':    '四厂',
+  '底部排期4厂':     '四厂',
+  '底部排期5厂+板房':'五厂+板房',
+};
+
+// ============================================================
+// DRAG & DROP
+// ============================================================
+function onDragOver(e) { e.preventDefault(); document.getElementById('dropzone').classList.add('dragover'); }
+function onDragLeave()  { document.getElementById('dropzone').classList.remove('dragover'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) processFile(f);
+}
+function onFileSelect(e) {
+  const f = e.target.files[0];
+  if (f) processFile(f);
+}
+
+// ============================================================
+// PARSE UTILS
+// ============================================================
+function parseQty(s) {
+  if (!s) return 0;
+  s = String(s);
+  let m = s.match(/=(\d+)PRS/i);
+  if (m) return parseInt(m[1]);
+  m = s.match(/(\d+)PRS/i);
+  if (m) return parseInt(m[1]);
+  const num = parseInt(s);
+  return isNaN(num) ? 0 : num;
+}
+
+function getMonthLine(header) {
+  const mm = header.match(/(\d+)月/);
+  const lm = header.match(/[厂房]([AB])\)/);
+  return { month: mm ? parseInt(mm[1]) : null, line: lm ? lm[1] : 'A' };
+}
+
+function gv(ws, r, c) {
+  const cell = ws[XLSX.utils.encode_cell({r, c})];
+  if (!cell) return '';
+  return String(cell.v ?? '').trim();
+}
+
+function isDateRow(ws, r, ncols) {
+  let cnt = 0;
+  for (let c = 0; c < ncols; c++) {
+    const v = ws[XLSX.utils.encode_cell({r, c})];
+    if (v && typeof v.v === 'number' && v.v >= 1 && v.v <= 31) cnt++;
+  }
+  return cnt >= 20;
+}
+
+// ============================================================
+// CORE PARSER
+// ============================================================
+function parseWorkbook(wb) {
+  const orders = [];
+  const logs   = [];
+  let sheetsProcessed = 0;
+
+  const targetSheets = Object.keys(FACTORY_MAP);
+
+  for (const sheetName of wb.SheetNames) {
+    const factory = FACTORY_MAP[sheetName] || FACTORY_MAP[sheetName.trim()];
+    if (!factory) {
+      logs.push({t:'warn', m:`Bỏ qua sheet: "${sheetName}"`});
+      continue;
+    }
+
+    const ws = wb.Sheets[sheetName];
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
+    const nrows = range.e.r + 1;
+    const ncols = range.e.c + 1;
+
+    logs.push({t:'ok', m:`📄 Sheet "${sheetName}" → ${factory} (${nrows} hàng)`});
+    sheetsProcessed++;
+
+    // Find all date rows
+    const dateRows = [];
+    for (let r = 0; r < nrows; r++) {
+      if (isDateRow(ws, r, ncols)) dateRows.push(r);
+    }
+    logs.push({t:'ok', m:`  → Tìm thấy ${dateRows.length} khối tháng`});
+
+    for (const dr of dateRows) {
+      // Find month header
+      let monthHeader = null, updateDate = '';
+      for (let k = dr - 1; k >= Math.max(0, dr - 20); k--) {
+        for (let c = 0; c < ncols; c++) {
+          const v = gv(ws, k, c);
+          if (!monthHeader && v.includes('月') && (v.includes('厂') || v.includes('板房'))) {
+            if (/\d+月（/.test(v)) { monthHeader = v; }
+          }
+          if (!updateDate && v.includes('更新日期')) {
+            updateDate = v.replace('更新日期：', '').trim();
+          }
+        }
+        if (monthHeader) break;
+      }
+      if (!monthHeader) continue;
+
+      const {month, line} = getMonthLine(monthHeader);
+      if (!month) continue;
+      const year = month >= 9 ? 2024 : 2025;
+
+      // Col→day map
+      const colToDay = {};
+      for (let c = 0; c < ncols; c++) {
+        const v = ws[XLSX.utils.encode_cell({r: dr, c})];
+        if (v && typeof v.v === 'number' && v.v >= 1 && v.v <= 31) {
+          colToDay[c] = v.v;
+        }
+      }
+
+      const R = {o:dr+1, s:dr+2, n:dr+3, l:dr+4, q:dr+5, x:dr+6, t:dr+7, nt:dr+8};
+
+      for (const [cStr, day] of Object.entries(colToDay)) {
+        const c = parseInt(cStr);
+        const oid = gv(ws, R.o, c);
+        if (!oid || !oid.startsWith('V')) continue;
+
+        const qtyRaw = gv(ws, R.q, c);
+        const qty    = parseQty(qtyRaw);
+        const dayPad   = String(day).padStart(2,'0');
+        const monPad   = String(month).padStart(2,'0');
+        const line_up_date = `${monPad}/${dayPad}/${year}`;
+
+        orders.push({
+          factory,
+          line,
+          year,
+          month,
+          month_label: monthHeader,
+          update_date: updateDate,
+          order_id:    oid,
+          style_code:  gv(ws, R.s, c),
+          shoe_name:   gv(ws, R.n, c),
+          last_code:   gv(ws, R.l, c),
+          qty_raw:     qtyRaw,
+          quantity:    qty,
+          delivery_date: gv(ws, R.x, c),
+          new_old:     gv(ws, R.t, c),
+          note:        gv(ws, R.nt, c),
+          line_up_day:  day,
+          line_up_date: line_up_date,
+          production_id: oid.slice(0, 11),
+        });
+      }
+    }
+  }
+
+  logs.push({t:'ok', m:`✅ Tổng cộng ${orders.length} đơn hàng từ ${sheetsProcessed} sheet nhà máy`});
+  return {orders, logs};
+}
+
+// ============================================================
+// FILE PROCESSING
+// ============================================================
+function setProgress(pct, text) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = text;
+}
+
+function addLog(msg, type='') {
+  const lw = document.getElementById('logWrap');
+  const div = document.createElement('div');
+  div.className = 'log-line ' + type;
+  div.textContent = msg;
+  lw.appendChild(div);
+  lw.scrollTop = lw.scrollHeight;
+}
+
+async function processFile(file) {
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('logWrap').innerHTML = '';
+  document.getElementById('emptyPlaceholder').style.display = 'none';
+  setProgress(10, `Đang đọc file "${file.name}"...`);
+  addLog(`📂 File: ${file.name} (${(file.size/1024).toFixed(0)} KB)`);
+
+  const arrayBuffer = await file.arrayBuffer();
+  setProgress(30, 'Đang parse workbook...');
+  addLog('🔍 Đang phân tích cấu trúc workbook...');
+
+  await new Promise(r => setTimeout(r, 50));
+  const wb = XLSX.read(arrayBuffer, {type:'array', cellDates:true});
+  setProgress(50, 'Đang bóc tách dữ liệu...');
+  addLog(`📊 Tìm thấy ${wb.SheetNames.length} sheet: ${wb.SheetNames.join(', ')}`);
+
+  await new Promise(r => setTimeout(r, 50));
+  const {orders, logs} = parseWorkbook(wb);
+
+  logs.forEach(l => addLog(l.m, l.t));
+  setProgress(85, 'Đang chuẩn bị hiển thị...');
+
+  await new Promise(r => setTimeout(r, 50));
+
+  // Sort
+  orders.sort((a,b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    if (a.month !== b.month) return a.month - b.month;
+    if (a.factory !== b.factory) return a.factory.localeCompare(b.factory);
+    if (a.line !== b.line) return a.line.localeCompare(b.line);
+    return a.line_up_day - b.line_up_day;
+  });
+
+  allOrders = orders;
+  document.getElementById('s-filename').textContent = file.name;
+
+  populateFilters();
+  updateStats();
+  renderTable();
+
+  document.getElementById('statsStrip').style.display = 'grid';
+  document.getElementById('filterBar').style.display  = 'flex';
+  document.getElementById('viewToggle').style.display = 'flex';
+  document.getElementById('tableWrap').style.display  = 'block';
+  document.getElementById('btn-export-xlsx').disabled = false;
+  document.getElementById('btn-export-csv').disabled  = false;
+
+  setProgress(100, `✅ Hoàn tất — ${orders.length} đơn hàng`);
+  showToast(`✅ Đã bóc tách ${orders.length} đơn hàng từ "${file.name}"`);
+}
+
+// ============================================================
+// FILTERS & STATS
+// ============================================================
+function populateFilters() {
+  const factories = [...new Set(allOrders.map(o=>o.factory))].sort();
+  const years     = [...new Set(allOrders.map(o=>o.year))].sort();
+  const months    = [...new Set(allOrders.map(o=>o.month))].sort((a,b)=>a-b);
+
+  const ff = document.getElementById('f-factory');
+  ff.innerHTML = '<option value="">Tất cả nhà máy</option>';
+  factories.forEach(f => ff.add(new Option(f, f)));
+
+  const fy = document.getElementById('f-year');
+  fy.innerHTML = '<option value="">Tất cả năm</option>';
+  years.forEach(y => fy.add(new Option(y, y)));
+
+  const fm = document.getElementById('f-month');
+  fm.innerHTML = '<option value="">Tất cả tháng</option>';
+  months.forEach(m => fm.add(new Option(`Tháng ${m}`, m)));
+
+  // Populate year-edit panel
+  const yepFrom = document.getElementById('yep-from');
+  yepFrom.innerHTML = '<option value="">— Chọn năm gốc —</option>';
+  years.forEach(y => yepFrom.add(new Option(y, y)));
+  document.getElementById('yearEditPanel').style.display = 'flex';
+  document.getElementById('yep-result').textContent = '';
+}
+
+function updateStats() {
+  const total  = allOrders.length;
+  const qty    = allOrders.reduce((s,o)=>s+o.quantity, 0);
+  const facs   = new Set(allOrders.map(o=>o.factory)).size;
+  const lines  = new Set(allOrders.map(o=>o.factory+o.line)).size;
+  const months = new Set(allOrders.map(o=>o.year+'-'+o.month)).size;
+  const newC   = allOrders.filter(o=>o.new_old==='新款').length;
+  const oldC   = allOrders.filter(o=>o.new_old==='旧款').length;
+  const upds   = [...new Set(allOrders.map(o=>o.update_date).filter(Boolean))];
+
+  document.getElementById('s-total').textContent     = total.toLocaleString('vi-VN');
+  document.getElementById('s-qty').textContent       = qty.toLocaleString('vi-VN');
+  document.getElementById('s-factories').textContent = facs;
+  document.getElementById('s-new').textContent       = newC.toLocaleString('vi-VN');
+  document.getElementById('s-old').textContent       = oldC.toLocaleString('vi-VN') + ' đơn cũ (旧款)';
+  document.getElementById('s-lines').textContent     = lines + ' dây chuyền';
+  document.getElementById('s-months').textContent    = months + ' tháng';
+  document.getElementById('s-sheets').textContent    = new Set(allOrders.map(o=>o.factory)).size + ' nhà máy';
+  document.getElementById('s-updated').textContent   = upds.slice(-1)[0] || '—';
+}
+
+// ============================================================
+// TABLE RENDER
+// ============================================================
+function getFiltered() {
+  const fac    = document.getElementById('f-factory').value;
+  const line   = document.getElementById('f-line').value;
+  const year   = document.getElementById('f-year').value;
+  const month  = document.getElementById('f-month').value;
+  const newold = document.getElementById('f-newold').value;
+  const q      = document.getElementById('f-search').value.toLowerCase().trim();
+
+  return allOrders.filter(o => {
+    if (fac    && o.factory  !== fac)        return false;
+    if (line   && o.line     !== line)        return false;
+    if (year   && String(o.year)  !== year)   return false;
+    if (month  && String(o.month) !== month)  return false;
+    if (newold && o.new_old  !== newold)      return false;
+    if (q) {
+      const hay = [o.order_id, o.shoe_name, o.style_code, o.factory, o.last_code, o.note].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function sortData(data) {
+  const dir = sortDir === 'asc' ? 1 : -1;
+  const fields = {
+    stt:'order_id', factory:'factory', line:'line', year:'year', month:'month',
+    line_up_day:'line_up_day', line_up_date:'line_up_date', production_id:'production_id',
+    order_id:'order_id', style_code:'style_code',
+    shoe_name:'shoe_name', quantity:'quantity', delivery_date:'delivery_date',
+    new_old:'new_old'
+  };
+  const field = fields[sortCol] || sortCol;
+  return [...data].sort((a,b) => {
+    const av = a[field], bv = b[field];
+    if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+    return String(av).localeCompare(String(bv)) * dir;
+  });
+}
+
+function renderTable() {
+  filtered = sortData(getFiltered());
+  page = 1;
+  if (currentView === 'calendar') renderCalendar();
+  else renderPage();
+}
+
+function renderPage() {
+  const total   = filtered.length;
+  const pgSize  = pageSize;
+  const totalPg = Math.max(1, Math.ceil(total / pgSize));
+  page = Math.min(page, totalPg);
+
+  const slice = pgSize >= 9999 ? filtered : filtered.slice((page-1)*pgSize, page*pgSize);
+
+  document.getElementById('row-count').textContent = total.toLocaleString('vi-VN');
+  document.getElementById('filter-count').textContent = total < allOrders.length
+    ? `Đang lọc ${total.toLocaleString('vi-VN')} / ${allOrders.length.toLocaleString('vi-VN')} đơn`
+    : `${allOrders.length.toLocaleString('vi-VN')} đơn`;
+
+  const CHIP = {'二厂':'chip-二厂','三厂':'chip-三厂','四厂':'chip-四厂','五厂+板房':'chip-五厂板房'};
+  const ROWC = {'二厂':'row-二厂','三厂':'row-三厂','四厂':'row-四厂','五厂+板房':'row-五厂板房'};
+
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = slice.map((o, i) => {
+    const globalIdx = (page-1)*pgSize + i + 1;
+    const newBadge = o.new_old === '新款'
+      ? `<span class="new-badge badge-new">新款</span>`
+      : o.new_old === '旧款'
+      ? `<span class="new-badge badge-old">旧款</span>`
+      : `<span class="new-badge badge-blank">—</span>`;
+    const rc = ROWC[o.factory] || '';
+    const chip = `<span class="fac-chip ${CHIP[o.factory]||''}">${o.factory}</span>`;
+    return `<tr class="${rc}">
+      <td style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:10px;">${globalIdx}</td>
+      <td>${chip}</td>
+      <td style="font-weight:700;font-size:11px;text-align:center;">${o.line}</td>
+      <td class="order-id-cell">${o.order_id}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--accent3);text-align:center;white-space:nowrap;">${o.production_id||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent2);text-align:center;white-space:nowrap;">${o.line_up_date||'—'}</td>
+      <td><span class="day-badge">${o.line_up_day}</span></td>
+      <td style="font-size:11px;text-align:center;">${o.month}</td>
+      <td style="font-size:11px;text-align:center;color:var(--text3);">${o.year}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);">${o.style_code}</td>
+      <td style="font-size:12px;font-weight:600;max-width:200px;">${o.shoe_name}</td>
+      <td class="qty-cell">${o.quantity > 0 ? o.quantity.toLocaleString('vi-VN') : '—'}</td>
+      <td class="xf-cell">${o.delivery_date || '—'}</td>
+      <td>${newBadge}</td>
+      <td style="font-size:10px;color:var(--text3);max-width:160px;font-family:'JetBrains Mono',monospace;">${o.last_code||'—'}</td>
+      <td style="font-size:11px;color:var(--text2);">${o.note||''}</td>
+    </tr>`;
+  }).join('');
+
+  // Pagination
+  renderPagination(total, totalPg);
+
+  // Update sort indicators
+  document.querySelectorAll('.data-table th').forEach(th => {
+    th.classList.remove('sorted-asc','sorted-desc');
+  });
+}
+
+function renderPagination(total, totalPg) {
+  if (pageSize >= 9999) {
+    document.getElementById('pagination').innerHTML = `<div class="page-info">Hiển thị tất cả ${total.toLocaleString('vi-VN')} dòng</div><div></div>`;
+    return;
+  }
+  const start = (page-1)*pageSize+1;
+  const end   = Math.min(page*pageSize, total);
+  let html = `<div class="page-info">Hiển thị ${start.toLocaleString()}–${end.toLocaleString()} / ${total.toLocaleString()} dòng</div><div class="page-btns">`;
+  html += `<button class="page-btn" onclick="goPage(1)" ${page===1?'disabled':''}>«</button>`;
+  html += `<button class="page-btn" onclick="goPage(${page-1})" ${page===1?'disabled':''}>‹</button>`;
+
+  const maxBtns = 7;
+  let startP = Math.max(1, page - Math.floor(maxBtns/2));
+  let endP   = Math.min(totalPg, startP + maxBtns - 1);
+  if (endP - startP < maxBtns - 1) startP = Math.max(1, endP - maxBtns + 1);
+  for (let p = startP; p <= endP; p++) {
+    html += `<button class="page-btn ${p===page?'active':''}" onclick="goPage(${p})">${p}</button>`;
+  }
+  html += `<button class="page-btn" onclick="goPage(${page+1})" ${page===totalPg?'disabled':''}>›</button>`;
+  html += `<button class="page-btn" onclick="goPage(${totalPg})" ${page===totalPg?'disabled':''}>»</button>`;
+  html += '</div>';
+  document.getElementById('pagination').innerHTML = html;
+}
+
+function goPage(p) { page = p; renderPage(); }
+function changePgSize() { pageSize = parseInt(document.getElementById('page-size').value); renderTable(); }
+
+// ============================================================
+// SORT
+// ============================================================
+function sortBy(col) {
+  if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  else { sortCol = col; sortDir = 'asc'; }
+  renderTable();
+}
+
+// ============================================================
+// VIEW SWITCH
+// ============================================================
+function switchView(v) {
+  currentView = v;
+  document.getElementById('btn-view-table').classList.toggle('active', v==='table');
+  document.getElementById('btn-view-cal').classList.toggle('active', v==='calendar');
+  document.getElementById('tableWrap').style.display    = v==='table'    ? 'block' : 'none';
+  document.getElementById('calendarView').style.display = v==='calendar' ? 'block' : 'none';
+  if (v==='calendar') renderCalendar();
+}
+
+// ============================================================
+// CALENDAR RENDER
+// ============================================================
+const FAC_PILL  = {'二厂':'pill-二厂','三厂':'pill-三厂','四厂':'pill-四厂','五厂+板房':'pill-五厂板房'};
+const FAC_COLOR = {'二厂':'#00c9a7','三厂':'#60a5fa','四厂':'#fbbf24','五厂+板房':'#c084fc'};
+const DOW_VI    = ['T2','T3','T4','T5','T6','T7','CN'];
+const MONTH_VI  = ['','Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+
+function renderCalendar() {
+  // Group filtered orders by year-month
+  const monthMap = {};
+  filtered.forEach(o => {
+    const key = `${o.year}-${String(o.month).padStart(2,'0')}`;
+    if (!monthMap[key]) monthMap[key] = {year:o.year, month:o.month, orders:[]};
+    monthMap[key].orders.push(o);
+  });
+
+  const sortedMonths = Object.keys(monthMap).sort();
+  if (!sortedMonths.length) {
+    document.getElementById('calendarContainer').innerHTML =
+      `<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Không có dữ liệu lịch</div></div>`;
+    return;
+  }
+
+  const html = sortedMonths.map(key => {
+    const {year, month, orders} = monthMap[key];
+    return buildMonthBlock(year, month, orders);
+  }).join('');
+
+  document.getElementById('calendarContainer').innerHTML = html;
+}
+
+function buildMonthBlock(year, month, orders) {
+  const totalQty = orders.reduce((s,o)=>s+o.quantity,0);
+  const facCounts = {};
+  orders.forEach(o => { facCounts[o.factory] = (facCounts[o.factory]||0) + 1; });
+
+  // Month summary pills
+  const pillsHtml = Object.entries(facCounts).map(([f,n]) =>
+    `<span class="cal-month-pill ${FAC_PILL[f]||''}" style="border:1px solid ${FAC_COLOR[f]||'#888'}33">${f}: ${n}</span>`
+  ).join('');
+
+  // Build day→orders map
+  const dayMap = {};
+  orders.forEach(o => {
+    const d = o.line_up_day;
+    if (!dayMap[d]) dayMap[d] = [];
+    dayMap[d].push(o);
+  });
+
+  // Calendar grid
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstDow = new Date(year, month-1, 1).getDay(); // 0=Sun
+  const offset = firstDow === 0 ? 6 : firstDow - 1;    // Mon-first offset
+
+  const dowRow = DOW_VI.map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+  const emptyCells = Array.from({length:offset}, () => `<div class="cal-cell empty"></div>`).join('');
+
+  const dayCells = Array.from({length:daysInMonth}, (_, i) => {
+    const day = i + 1;
+    const dayOrders = dayMap[day] || [];
+    const hasOrders = dayOrders.length > 0;
+    const totalDayQty = dayOrders.reduce((s,o)=>s+o.quantity,0);
+
+    const SHOW = 3;
+    const pillsDay = dayOrders.slice(0,SHOW).map(o => {
+      const pc = FAC_PILL[o.factory] || '';
+      const name = o.shoe_name.length > 16 ? o.shoe_name.slice(0,15)+'…' : o.shoe_name;
+      const safeO = encodeOrder(o);
+      return `<span class="cal-pill ${pc}" onclick="showModal('${safeO}')" title="${o.order_id} · ${o.shoe_name} · ${o.quantity.toLocaleString()} PRS">${name}</span>`;
+    }).join('');
+
+    const moreHtml = dayOrders.length > SHOW
+      ? `<div class="cal-more" onclick="showDayModal(${year},${month},${day})">+${dayOrders.length-SHOW} đơn nữa…</div>` : '';
+
+    const qtyHtml = hasOrders
+      ? `<div class="cal-total-bar">${totalDayQty.toLocaleString('vi-VN')} PRS</div>` : '';
+
+    return `<div class="cal-cell${hasOrders?' has-orders':''}">
+      <div class="cal-day-num">${day}</div>
+      ${pillsDay}${moreHtml}${qtyHtml}
+    </div>`;
+  }).join('');
+
+  return `<div class="cal-month-block">
+    <div class="cal-month-header">
+      <div class="cal-month-name">📅 ${MONTH_VI[month]} ${year}</div>
+      <div class="cal-month-meta">${orders.length} đơn · ${totalQty.toLocaleString('vi-VN')} PRS</div>
+      <div class="cal-month-pills">${pillsHtml}</div>
+    </div>
+    <div class="cal-grid-wrap">
+      <div class="cal-grid">
+        ${dowRow}
+        ${emptyCells}
+        ${dayCells}
+      </div>
+    </div>
+  </div>`;
+}
+
+// Encode order to pass via onclick safely
+function encodeOrder(o) {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+}
+function decodeOrder(s) {
+  return JSON.parse(decodeURIComponent(escape(atob(s))));
+}
+
+// ============================================================
+// MODAL — single order
+// ============================================================
+function showModal(encoded) {
+  const o = decodeOrder(encoded);
+  const CHIP = {'二厂':'chip-二厂','三厂':'chip-三厂','四厂':'chip-四厂','五厂+板房':'chip-五厂板房'};
+  const newBadge = o.new_old==='新款'
+    ? '<span class="new-badge badge-new">新款 · Mới</span>'
+    : o.new_old==='旧款'
+    ? '<span class="new-badge badge-old">旧款 · Cũ</span>'
+    : '';
+
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-top">
+      <div>
+        <div class="modal-oid">${o.order_id}</div>
+        <div class="modal-shoe">${o.shoe_name}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-grid">
+      <div class="mf">
+        <div class="mf-label">Nhà máy</div>
+        <div class="mf-val"><span class="fac-chip ${CHIP[o.factory]||''}">${o.factory}</span> Dây ${o.line}</div>
+      </div>
+      <div class="mf">
+        <div class="mf-label">Ngày lên chuyền</div>
+        <div class="mf-val accent mono">${o.line_up_date||`${String(o.month).padStart(2,'0')}/${String(o.line_up_day).padStart(2,'0')}/${o.year}`}</div>
+      </div>
+      <div class="mf">
+        <div class="mf-label">Production ID</div>
+        <div class="mf-val mono" style="color:var(--accent3)">${o.production_id||'—'}</div>
+      </div>
+      <div class="mf">
+        <div class="mf-label">Style Code</div>
+        <div class="mf-val mono">${o.style_code||'—'}</div>
+      </div>
+      <div class="mf">
+        <div class="mf-label">Sản lượng</div>
+        <div class="mf-val accent" style="font-size:16px;font-family:'JetBrains Mono',monospace">${o.quantity.toLocaleString('vi-VN')} PRS</div>
+      </div>
+      <div class="mf">
+        <div class="mf-label">Loại mẫu</div>
+        <div class="mf-val">${newBadge||'—'}</div>
+      </div>
+      <div class="mf full">
+        <div class="mf-label">Sản lượng chi tiết</div>
+        <div class="mf-val mono" style="font-size:11px;color:var(--text3)">${o.qty_raw||'—'}</div>
+      </div>
+      <div class="mf full">
+        <div class="mf-label">🚢 Ngày xuất hàng (XF)</div>
+        <div class="mf-val warn mono">${o.delivery_date||'—'}</div>
+      </div>
+      ${o.last_code ? `<div class="mf full"><div class="mf-label">Mã khuôn (Last)</div><div class="mf-val mono" style="font-size:11px">${o.last_code}</div></div>` : ''}
+      ${o.note ? `<div class="mf full"><div class="mf-label">Ghi chú</div><div class="mf-val" style="font-size:12px">${o.note}</div></div>` : ''}
+      <div class="mf full">
+        <div class="mf-label">Tháng/Dây chuyền</div>
+        <div class="mf-val mono" style="font-size:11px;color:var(--text3)">${o.month_label||'—'} · Cập nhật ${o.update_date||'—'}</div>
+      </div>
+    </div>`;
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+// Show all orders on a specific day
+function showDayModal(year, month, day) {
+  const dayOrders = filtered.filter(o => o.year===year && o.month===month && o.line_up_day===day);
+  const CHIP = {'二厂':'chip-二厂','三厂':'chip-三厂','四厂':'chip-四厂','五厂+板房':'chip-五厂板房'};
+
+  const rows = dayOrders.map(o => `
+    <div class="mf full" style="cursor:pointer" onclick="showModal('${encodeOrder(o)}')">
+      <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);margin-bottom:2px">${o.order_id}</div>
+          <div style="font-weight:700;font-size:13px">${o.shoe_name}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${o.style_code}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <span class="fac-chip ${CHIP[o.factory]||''}">${o.factory}</span>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--accent);margin-top:4px">${o.quantity.toLocaleString('vi-VN')} PRS</div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  const totalQ = dayOrders.reduce((s,o)=>s+o.quantity,0);
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-top">
+      <div>
+        <div class="modal-oid" style="font-size:13px;color:var(--text3)">Ngày ${day}/${month}/${year}</div>
+        <div class="modal-shoe">${dayOrders.length} đơn lên chuyền</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Tổng: <strong style="color:var(--accent)">${totalQ.toLocaleString('vi-VN')} PRS</strong> — Click vào đơn để xem chi tiết</div>
+    <div class="modal-grid">${rows}</div>`;
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target===document.getElementById('modalOverlay'))
+    document.getElementById('modalOverlay').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportCSV() {
+  if (!filtered.length) return;
+  const headers = ['STT','Nhà máy','Dây chuyền','Mã lệnh','Production ID','Ngày LC (đầy đủ)','Ngày lên chuyền','Tháng','Năm',
+    'Tháng/DC','Ngày cập nhật','Style Code','Tên giày','Mã khuôn','SL (PRS)','SL chi tiết','Ngày XF','Loại','Ghi chú'];
+  const rows = filtered.map((o,i) => [
+    i+1, o.factory, o.line, o.order_id, o.production_id||'', o.line_up_date||'', o.line_up_day, o.month, o.year,
+    o.month_label, o.update_date, o.style_code, o.shoe_name,
+    o.last_code, o.quantity, o.qty_raw, o.delivery_date, o.new_old, o.note
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `lich_len_chuyen_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showToast('⬇ Đã xuất CSV');
+}
+
+// ============================================================
+// STYLED EXCEL EXPORT  (matching file-2 quality)
+// ============================================================
+function exportExcel() {
+  if (!allOrders.length) return;
+  showToast('⏳ Đang tạo file Excel có định dạng...');
+  setTimeout(_buildStyledExcel, 120);
+}
+
+function _buildStyledExcel() {
+  // ── palette ──────────────────────────────────────────────
+  const FAC = {
+    '二厂':      {accent:'00A88B', base:'E8F5F2', alt:'D4F0EA'},
+    '三厂':      {accent:'2B7BE8', base:'EBF3FC', alt:'D5E8FA'},
+    '四厂':      {accent:'D97B00', base:'FEF9EC', alt:'FDF0C5'},
+    '五厂+板房': {accent:'8B3FC8', base:'F5F0FE', alt:'EBE0FB'},
+  };
+  const HDR_FONT = {bold:true, color:{rgb:'FFFFFFFF'}, name:'Arial', sz:10};
+  const thin = {style:'thin', color:{rgb:'FFC0C8D8'}};
+  const BORD = {top:thin, bottom:thin, left:thin, right:thin};
+
+  function fill(rgb) { return {patternType:'solid', fgColor:{rgb:'FF'+rgb}}; }
+  function font(opts) { return Object.assign({name:'Arial', sz:9}, opts); }
+  function align(h='left', v='center', wrap=false) { return {horizontal:h, vertical:v, wrapText:wrap}; }
+
+  // Serial ngày Excel — chỉ lấy Ngày/Tháng/Năm, loại bỏ hoàn toàn giờ/phút/giây.
+  // Tính bằng mốc UTC (không dùng new Date(y,m,d) cục bộ) rồi int() qua Math.floor()
+  // để tránh lệch do timezone/LMT khi SheetJS convert Date -> serial number.
+  function excelDateSerial(y, m, d) {
+    const utcMs   = Date.UTC(y, m - 1, d);
+    const epochMs = Date.UTC(1899, 11, 30); // mốc chuẩn hệ ngày Excel (bù lỗi nhuận 1900)
+    return Math.floor((utcMs - epochMs) / 86400000); // int() — bỏ phần thời gian
+  }
+
+  function setMergeTitle(ws, r1, c1, r2, c2, text, s) {
+    if (!ws['!merges']) ws['!merges'] = [];
+    ws['!merges'].push({s:{r:r1,c:c1}, e:{r:r2,c:c2}});
+    ws[XLSX.utils.encode_cell({r:r1,c:c1})] = {v:text, t:'s', s};
+  }
+
+  function writeHeaderRow(ws, rowIdx, headers) {
+    headers.forEach((h, ci) => {
+      ws[XLSX.utils.encode_cell({r:rowIdx,c:ci})] = {v:h, t:'s', s:{
+        fill:fill('1E3A5F'), font:HDR_FONT,
+        alignment:align('center','center',true), border:BORD,
+      }};
+    });
+  }
+
+  const wb = XLSX.utils.book_new();
+  const today = new Date().toLocaleDateString('vi-VN');
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // SHEET — Tất cả đơn hàng
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const MASTER_H = [
+    'STT', 'Nhà máy', 'Dây chuyền',
+    'Mã lệnh (Order ID)',
+    'Production ID',
+    'Ngày LC (đầy đủ)',
+    'Ngày lên chuyền', 'Tháng', 'Năm',
+    'Tháng/Dây chuyền', 'Ngày cập nhật',
+    'Style Code', 'Tên giày (Shoe Name)',
+    'Mã khuôn (Last)', 'Sản lượng (PRS)', 'Sản lượng chi tiết',
+    'Ngày xuất hàng (XF)', 'Loại mẫu', 'Ghi chú',
+  ];
+  //                 STT  NM   DC   OID  PID  NGLC  Ng  Th  Nm  ML   UD   SC  Shoe Last   Qty  QtyR XF   Loai Ghi
+  const MASTER_W = [ 5,   10,  10,  22,  12,  14,   9,  7,  7,  22,  12,  14, 28,  26,   13,  26,  22,  10,  28 ];
+  const NC = MASTER_H.length;
+  const ws = {};
+
+  // Row 0: title
+  setMergeTitle(ws, 0,0, 0,NC-1,
+    `BẢNG TỔNG HỢP LỊCH LÊN CHUYỀN ĐÁY GIÀY — Xuất ${today}`,
+    {fill:fill('EBF4FF'), font:font({bold:true,sz:14,color:{rgb:'FF1E3A5F'}}),
+     alignment:align('center','center'), border:BORD});
+
+  // Row 1: sub-info
+  setMergeTitle(ws, 1,0, 1,NC-1,
+    `Tổng ${filtered.length} đơn hàng · Production ID = 11 ký tự đầu Order ID · Ngày LC (đầy đủ) = số ngày Excel dạng int, chỉ Ngày/Tháng/Năm`,
+    {fill:fill('EBF4FF'), font:font({italic:true,sz:9,color:{rgb:'FF64748B'}}),
+     alignment:align('center'), border:BORD});
+
+  // Row 2: column headers
+  writeHeaderRow(ws, 2, MASTER_H);
+
+  // Data rows — flat, no section separators
+  const rowHeights = [{hpt:28},{hpt:16},{hpt:22}];
+  let dataRow = 3;
+  let globalIdx = 0;
+
+  filtered.forEach(o => {
+    globalIdx++;
+    const cfg = FAC[o.factory] || {accent:'1E3A5F', base:'F8FAFC', alt:'EFF6FF'};
+    const rowFill = globalIdx % 2 === 1 ? cfg.base : cfg.alt;
+    const prodId  = o.production_id || (o.order_id||'').slice(0,11);
+
+    const vals = [
+      globalIdx, o.factory, o.line,
+      o.order_id, prodId,
+      excelDateSerial(o.year, o.month, o.line_up_day),  // int serial ngày, không có giờ
+      o.line_up_day, o.month, o.year,
+      o.month_label, o.update_date,
+      o.style_code, o.shoe_name, o.last_code,
+      o.quantity, o.qty_raw,
+      o.delivery_date, o.new_old, o.note,
+    ];
+
+    vals.forEach((v, ci) => {
+      const addr  = XLSX.utils.encode_cell({r:dataRow, c:ci});
+      const isDate = v instanceof Date;
+      const isNum = typeof v === 'number';
+      const col   = MASTER_H[ci];
+      let s = {fill:fill(rowFill), font:font({}), alignment:align('left','center'), border:BORD};
+
+      if (col==='STT')                { s.font=font({sz:9,color:{rgb:'FF94A3B8'}}); s.alignment=align('center'); }
+      if (col==='Nhà máy')            { s.font=font({bold:true,color:{rgb:'FF'+cfg.accent}}); }
+      if (col==='Dây chuyền')         { s.font=font({bold:true}); s.alignment=align('center'); }
+      if (col==='Mã lệnh (Order ID)') { s.font=font({color:{rgb:'FF00A88B'}}); }
+      if (col==='Production ID')      { s.font=font({bold:true,color:{rgb:'FFD97B00'}}); s.alignment=align('center'); }
+      if (col==='Ngày LC (đầy đủ)') {
+        s.font=font({bold:true,color:{rgb:'FF1E3A5F'}});
+        s.alignment=align('center');
+        s.numFmt='mm/dd/yyyy';
+      }
+      if (col==='Ngày lên chuyền')    { s.font=font({bold:true}); s.alignment=align('center'); }
+      if (col==='Tháng'||col==='Năm') { s.alignment=align('center'); }
+      if (col==='Sản lượng (PRS)')    { s.font=font({bold:true}); s.alignment=align('right'); s.numFmt='#,##0'; }
+      if (col==='Loại mẫu') {
+        if (v==='新款') { s.fill=fill('DBEAFE'); s.font=font({bold:true,color:{rgb:'FF1D4ED8'}}); }
+        else if (v==='旧款') { s.fill=fill('F1F5F9'); s.font=font({color:{rgb:'FF64748B'}}); }
+      }
+
+      if (isDate) {
+        ws[addr] = {v, t:'d', s, z:'mm/dd/yyyy'};
+      } else {
+        ws[addr] = {v: v ?? '', t: isNum?'n':'s', s};
+        if (isNum && s.numFmt) ws[addr].z = s.numFmt;
+      }
+    });
+    rowHeights.push({hpt:15});
+    dataRow++;
+  });
+
+  ws['!ref']  = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:dataRow-1,c:NC-1}});
+  ws['!rows'] = rowHeights;
+  ws['!cols'] = MASTER_W.map(w=>({wch:w}));
+  ws['!autofilter'] = {ref: XLSX.utils.encode_range({s:{r:2,c:0}, e:{r:2,c:NC-1}})};
+  ws['!freeze'] = {xSplit:0, ySplit:3, topLeftCell: XLSX.utils.encode_cell({r:3,c:0})};
+
+  XLSX.utils.book_append_sheet(wb, ws, '📋 Tất cả đơn hàng');
+
+  // ── write ──────────────────────────────────────────
+  const fname = `lich_len_chuyen_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, fname, {bookSST:false, type:'binary', cellStyles:true});
+  showToast(`✅ Đã xuất "${fname}" — ${filtered.length.toLocaleString()} đơn · 1 sheet`);
+}
+
+// ============================================================
+// BULK YEAR EDIT
+// ============================================================
+function applyYearEdit() {
+  const fromYear = parseInt(document.getElementById('yep-from').value);
+  const toYear   = parseInt(document.getElementById('yep-to').value);
+  const scope    = document.getElementById('yep-scope-sel').value;
+  const resultEl = document.getElementById('yep-result');
+
+  resultEl.className = 'yep-result';
+  resultEl.textContent = '';
+
+  if (!fromYear) { resultEl.className='yep-result err'; resultEl.textContent='⚠ Chọn năm gốc'; return; }
+  if (!toYear || toYear < 2020 || toYear > 2035) { resultEl.className='yep-result err'; resultEl.textContent='⚠ Nhập năm hợp lệ (2020–2035)'; return; }
+  if (fromYear === toYear) { resultEl.className='yep-result err'; resultEl.textContent='⚠ Năm gốc = năm mới'; return; }
+
+  const pool = scope === 'filtered' ? filtered : allOrders;
+  let count = 0;
+
+  pool.forEach(o => {
+    if (o.year === fromYear) {
+      o.year = toYear;
+      // Rebuild line_up_date with new year
+      const d = String(o.line_up_day).padStart(2,'0');
+      const m = String(o.month).padStart(2,'0');
+      o.line_up_date = `${m}/${d}/${toYear}`;
+      // Rebuild production_id is unchanged (based on order_id)
+      count++;
+    }
+  });
+
+  if (count === 0) {
+    resultEl.className='yep-result err';
+    resultEl.textContent=`Không tìm thấy đơn năm ${fromYear}`;
+    return;
+  }
+
+  // Refresh filter dropdowns (years may have changed)
+  populateFilters();
+  updateStats();
+  renderTable();
+
+  resultEl.className='yep-result ok';
+  resultEl.textContent=`✅ Đã sửa ${count.toLocaleString('vi-VN')} đơn`;
+
+  // Update scope description
+  document.getElementById('yep-scope').textContent =
+    `Lần sửa gần nhất: ${fromYear} → ${toYear} (${count} đơn)`;
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
